@@ -167,15 +167,14 @@ struct pkt packet;
       tolayer5(1, packet.payload); // deliver data to application
       ack_B ^= 1; // update ack number
       puts("  B: Sending acknowledgment packet");
-      tolayer3(1, make_ack(ack_B));
    } else {
       if (corrupt)
          printf("  B: RECEIVED CORRUPT PACKET. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
       else
          puts("  B: RECEIVED DUPLICATE PACKET..");
       puts("  B: Re-sending acknowledgment packet");
-      tolayer3(1, make_ack(ack_B)); // send last ack number
    }
+   tolayer3(1, make_ack(ack_B));
 }
 
 /* called when B's timer goes off */
