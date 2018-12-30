@@ -46,7 +46,8 @@ int ack_B = 1; // last acknowledged packet
 _Bool can_send = 1;
 struct pkt pkt2send;
 
-int check_sum(struct pkt _pkt)
+int 
+check_sum(struct pkt _pkt)
 {
    unsigned int sum = 0;
 
@@ -64,7 +65,8 @@ int check_sum(struct pkt _pkt)
    return (unsigned short)~sum;
 }
 
-_Bool is_pkt_corrupt(struct pkt _pkt)
+_Bool 
+is_pkt_corrupt(struct pkt _pkt)
 {
    if (_pkt.checksum != check_sum(_pkt))
       return 1;
@@ -96,7 +98,8 @@ make_pkt(int seq, struct msg data)
 
 /* called from layer 5, passed the data to be sent to other side */
 int
-    A_output(message) struct msg message;
+A_output(message) 
+struct msg message;
 {
    if (!can_send)
       return -1;
@@ -109,71 +112,69 @@ int
 }
 
 int
-    B_output(message) /* need be completed only for extra credit */
-    struct msg message;
+B_output(message) /* need be completed only for extra credit */
+struct msg message;
 {
 }
 
 /* called from layer 3, when a packet arrives for layer 4 */
 int
-    A_input(packet) struct pkt packet;
+A_input(packet) struct pkt packet;
 {
-   stoptimer(0);
-   if (!is_pkt_corrupt(packet) && packet.acknum == seq_A)
-   {
+   _Bool corrupt = is_pkt_corrupt(packet);
+
+   if (!corrupt && packet.acknum == seq_A) {
       puts("  A: RECEIVED VALID ACKNOWLEDGMENT!");
       seq_A ^= 1;
       can_send = 1;
-   }
-   else
-   {
-      puts("  A: RECEIVED INVALID ACKNOWLEDGMENT..");
-      tolayer3(0, pkt2send);
-      starttimer(0, TIME_OUT);
+      stoptimer(0);
+   } else {
+      if(corrupt)
+         puts("  A: RECEIVED CORRUPT ACKNOWLEDGMENT..");
+      else
+         puts("  A: RECEIVED DUPLICATE ACKNOWLEDGMENT..");
    }
 }
 
 /* called when A's timer goes off */
-int A_timerinterrupt()
+int 
+A_timerinterrupt()
 {
    printf("  A: Re-sending: %.*s, chksum: %d\n", 20, pkt2send.payload, pkt2send.checksum);
-
    tolayer3(0, pkt2send);
    starttimer(0, TIME_OUT);
 }
 
 /* the following routine will be called once (only) before any other */
 /* entity A routines are called. You can use it to do any initialization */
-int A_init()
+int 
+A_init()
 {
 }
 
 /* Note that with simplex transfer from a-to-B, there is no B_output() */
 
 /* called from layer 3, when a packet arrives for layer 4 at B*/
-int B_input(packet) struct pkt packet;
+int 
+B_input(packet) 
+struct pkt packet;
 {
    _Bool corrupt = is_pkt_corrupt(packet);
    _Bool expected = packet.seqnum == (ack_B ^ 1);
 
-   if (corrupt)
-   {
-      tolayer3(1, make_ack(ack_B)); // send last ack number
-      printf("  B: RECEIVED CORRUPT PACKET. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
-   }
-   else
-   {
-      if (expected)
-      {
-         printf("  B: RECEIVED VALID PACKET!. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
-         tolayer5(1, packet.payload); // deliver data to application
-         ack_B ^= 1;                  // update ack number
-      }
-      else
-      {
-         puts("  B: RECEIVED DUPLICATE PACKET..");
-      }
+   if(!corrupt && expected) {
+      printf("  B: RECEIVED VALID PACKET!. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
+      tolayer5(1, packet.payload); // deliver data to application
+      ack_B ^= 1; // update ack number
+      puts("  B: Sending acknowledgment packet");
       tolayer3(1, make_ack(ack_B));
+   } else {
+      if (corrupt)
+         printf("  B: RECEIVED CORRUPT PACKET. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
+      else
+         puts("  B: RECEIVED DUPLICATE PACKET..");
+      puts("  B: Re-sending acknowledgment packet");
+      tolayer3(1, make_ack(ack_B)); // send last ack number
    }
 }
 
