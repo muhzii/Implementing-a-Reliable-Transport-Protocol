@@ -156,13 +156,15 @@ struct pkt packet;
       queue_size -= window_base - old_base;
       printf("  A: RECEIVED ACKNOWLEDGMENT FOR seq#%d\n", window_base - 1);
 
-      stoptimer(0);
-      if (!(window_base == next_seq_A))
-         starttimer(0, TIME_OUT);
+      if(window_base > old_base) {
+         stoptimer(0);
+         if (!(window_base == next_seq_A))
+            starttimer(0, TIME_OUT);
 
-      struct msg dummy;
-      while (out_A(dummy, 0)) // keep sending till window is full or there's nothing else to send
-         continue;
+         struct msg dummy;
+         while (out_A(dummy, 0)) // keep sending till window is full or there's nothing else to send
+            continue;
+      }
    }
    else
       puts("  A: RECEIVED CORRUPT ACKNOWLEDGMENT");
@@ -206,9 +208,7 @@ struct pkt packet;
       printf("  B: RECEIVED VALID PACKET!. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
       tolayer5(1, packet.payload); // deliver data to application
       last_ack_B++;
-   }
-   else
-   {
+   } else {
       if (corrupt)
          printf("  B: RECEIVED CORRUPT PACKET. data: %.*s, chksum: %d\n", 20, packet.payload, packet.checksum);
       else
